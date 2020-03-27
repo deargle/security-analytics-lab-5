@@ -1,0 +1,41 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+
+    {% if error %}
+        <p class=error><strong>Error:</strong> {{ error }}
+    {% endif %}
+    
+    <h1>Predict if malicious!</h1>
+    
+    {% if y_pred %}
+    <div>
+        <h2>Prediction</h2>
+        <div>
+            Predictors: 
+            <dl>
+            {% for key, value in predictors.items() %}
+            <dt>{{ key }}</dt>
+            <dd>{{ value }}</dd>
+            {% endfor %}
+            </dl>
+        </div>
+        <div>
+            Prediction: {{y_pred}}
+        </div>
+    </div>
+    {% endif %}
+
+
+    <h2>Predict me</h2>
+    <form method='POST'>
+        {% for feature_name in feature_names -%}
+        <p>
+            <label for='{{feature_name}}'>{{feature_name}}</label>
+            <input id='{{feature_name}}' name='{{feature_name}}'>
+        </p>
+        {%- endfor %}
+        <button type='submit'>Submit</button>
+    </form>
+
+{% endblock %}
