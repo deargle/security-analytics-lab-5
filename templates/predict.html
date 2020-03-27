@@ -5,14 +5,14 @@
     {% if error %}
         <p class=error><strong>Error:</strong> {{ error }}
     {% endif %}
-    
+
     <h1>Predict if malicious!</h1>
-    
+
     {% if y_pred %}
     <div>
         <h2>Prediction</h2>
         <div>
-            Predictors: 
+            Predictors:
             <dl>
             {% for key, value in predictors.items() %}
             <dt>{{ key }}</dt>
@@ -28,7 +28,7 @@
 
 
     <h2>Predict me</h2>
-    <form method='POST'>
+    <form id='form-make-prediction' method='POST'>
         {% for feature_name in feature_names -%}
         <p>
             <label for='{{feature_name}}'>{{feature_name}}</label>
@@ -37,5 +37,71 @@
         {%- endfor %}
         <button type='submit'>Submit</button>
     </form>
+
+    <script type="text/javascript">
+      // read about form submit listener at
+      // https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/submit_event
+
+      // also I'm using a javascript "Arrow Function" as the event listener
+
+      document.getElementById('form-make-prediction').addEventListener('submit', (event)=>{
+        event.preventDefault();
+        make_prediction();
+      })
+
+      // code below adapted from
+      // https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+
+      const make_prediction = () => {
+        let data = {}
+
+        // jinja dynamically builds one of each line for each
+        // value in its `feature_name` array
+        {% for feature_name in feature_names -%}
+        data['{{feature_name}}'] = document.querySelector('#{{feature_name}}').value
+        {% endfor %}
+
+        fetch('/predict', {
+          method: 'POST', // or 'PUT'
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        })
+        // `then` using async/await, which is shorthand for javascript Promises
+        .then( async (response) => {
+          if (!response.ok) {
+            error = await response.json() // wait for the `error` so we can `throw` it
+            throw error
+          } else {
+            return response.json()
+          }
+        })
+        /*
+        // equivalently to the above `then`:
+        .then((response) => {
+          if (!response.ok) {
+            return new Promise( (_, reject) => {
+              response.json()
+              .then( (error) => {
+                reject(error)
+              })
+            })
+          } else {
+            return response.json()
+          }
+        })
+        */
+        .then((data) => {
+          console.log('Success:', data);
+          alert(`Prediction: ${data}`)
+        })
+        .catch((error) => {
+          console.error('Error:', error);
+        });
+      }
+
+
+    </script>
 
 {% endblock %}

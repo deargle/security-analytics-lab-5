@@ -5,7 +5,7 @@ import pandas as pd
 from dotenv import load_dotenv
 load_dotenv()
 
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, jsonify
 app = Flask(__name__)
 
 with open(os.getenv('MODEL_NAME'), 'rb') as f:
@@ -69,8 +69,21 @@ feature_names = [str(name) for name in os.getenv('MODEL_FEATURES').split(',')]
 def hello_world():
     return 'Hello, World!'
 
-class InvalidUsageError(Exception):
-    pass
+#https://flask.palletsprojects.com/en/1.1.x/patterns/apierrors/
+class InvalidUsage(Exception):
+    status_code = 400
+
+    def __init__(self, message, status_code=None, payload=None):
+        Exception.__init__(self)
+        self.message = message
+        if status_code is not None:
+            self.status_code = status_code
+        self.payload = payload
+
+    def to_dict(self):
+        rv = dict(self.payload or ())
+        rv['message'] = self.message
+        return rv
 
 #https://flask.palletsprojects.com/en/1.1.x/quickstart/#the-request-object
 @app.route('/predict', methods=['GET','POST'])
@@ -78,22 +91,32 @@ def predict():
     error = None
     y_pred = None
     if request.method == 'POST':
+        if request.is_json:
+            data = request.get_json()
+        else:
+            data = request.form
         predict_me = {feature_name: None for feature_name in original_dataset_features}
-        
+
         # override the features we actually care about with ones submitted by the form.
         try:
             for feature_name in feature_names:
-                submitted_val = request.form[feature_name]
+                submitted_val = data[feature_name]
                 if not submitted_val:
-                    raise InvalidUsageError('missing feature {}'.format(feature_name))
-                predict_me[feature_name] = request.form[feature_name]
-            
-            predict_me = pd.DataFrame(predict_me, index=[0]) # it's not typical to build a 
-                                                             # dataframe with only one row, but that's 
-                                                             # what we're doing, so pandas wants us to 
+                    raise InvalidUsage('missing feature {}'.format(feature_name), 400)
+                predict_me[feature_name] = submitted_val
+
+            predict_me = pd.DataFrame(predict_me, index=[0]) # it's not typical to build a
+                                                             # dataframe with only one row, but that's
+                                                             # what we're doing, so pandas wants us to
                                                              # specify the index for that row with `index=[0]`
             y_pred = '{:.3f}'.format(model.predict_proba(predict_me)[:,1][0])
-        except InvalidUsageError as e:
-            error = e
-        
+        except InvalidUsage as e:
+            if request.is_json:
+                response = jsonify(e.to_dict())
+                response.status_code = e.status_code
+                return response
+            else:
+                error = e.message # so that the render_template call below can access it
+        if request.is_json:
+            return jsonify(y_pred)
     return render_template('predict.html', error=error, y_pred=y_pred, feature_names=feature_names, predictors=request.form)
