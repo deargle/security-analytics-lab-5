@@ -86,7 +86,7 @@ class InvalidUsage(Exception):
         return rv
 
 #https://flask.palletsprojects.com/en/1.1.x/quickstart/#the-request-object
-@app.route('/predict', methods=['GET','POST'])
+@app.route('/predict_yo', methods=['GET','POST'])
 def predict():
     error = None
     y_pred = None
@@ -118,5 +118,5 @@ def predict():
             else:
                 error = e.message # so that the render_template call below can access it
         if request.is_json:
-            return jsonify(y_pred)
+            return jsonify({'pred':y_pred})
     return render_template('predict.html', error=error, y_pred=y_pred, feature_names=feature_names, predictors=request.form)
