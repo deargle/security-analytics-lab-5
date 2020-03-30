@@ -61,7 +61,7 @@
         data['{{feature_name}}'] = document.querySelector('#{{feature_name}}').value
         {% endfor %}
 
-        fetch('/predict', {
+        fetch('/predict.json', {
           method: 'POST', // or 'PUT'
           headers: {
             'Content-Type': 'application/json',
@@ -94,7 +94,7 @@
         */
         .then((data) => {
           console.log('Success:', data);
-          alert(`Prediction: ${data}`)
+          alert(`Prediction: ${data.pred}`)
         })
         .catch((error) => {
           console.error('Error:', error);
